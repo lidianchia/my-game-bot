@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import templatePage from "../../public/app/games/_template.js";
+import guessPage from "../../public/app/games/guess.js";
 import { stringsFor } from "../../public/app/i18n.js";
 import { coreMessages, type Lang } from "../../src/core/i18n";
+import { hiLoMessages } from "../../src/games/_template/i18n";
 import { guessMessages } from "../../src/games/guess/i18n";
 import { todMessages } from "../../src/games/tod/i18n";
 import { G, heat, signed } from "../../src/ui/glyphs";
@@ -35,7 +38,15 @@ describe("visual style", () => {
 
   it("keeps every interface string emoji-free in both languages", () => {
     for (const lang of ["zh", "en"] as Lang[]) {
-      const tables = [coreMessages[lang], todMessages[lang], guessMessages[lang], stringsFor(lang)];
+      const tables = [
+        coreMessages[lang],
+        todMessages[lang],
+        guessMessages[lang],
+        hiLoMessages[lang],
+        stringsFor(lang),
+        guessPage.strings[lang],
+        templatePage.strings[lang],
+      ];
       for (const text of tables.flatMap((table) => allStrings(table as Record<string, unknown>))) {
         expect(PICTOGRAPHIC.test(text), `${lang}: ${text}`).toBe(false);
       }

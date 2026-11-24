@@ -1,5 +1,11 @@
 // @ts-check
 
+/**
+ * Building blocks for the game page: the shell and every game page draw with
+ * these, and their styles are in app.css. Things only one game uses belong in
+ * that game's page (games/<id>.js) and stylesheet.
+ */
+
 /** @typedef {Node | string | number | null | undefined | false} Child */
 
 /**
@@ -53,6 +59,77 @@ export function delta(value) {
   return value > 0 ? `+${value}` : value < 0 ? `−${Math.abs(value)}` : "0";
 }
 
+// ------------------------------------------------------------- text blocks
+
+/** @param {string} text */
+export const note = (text) => h("p", { class: "note" }, text);
+
+/** @param {string} text */
+export const title = (text) => h("h2", { class: "title" }, text);
+
+/** A grey strip across the page, e.g. "you're only watching". @param {string} text */
+export const banner = (text) => h("p", { class: "banner" }, text);
+
+/**
+ * The big title the lobby and the end screen open with.
+ * @param {string} heading
+ * @param {string | null} sub
+ */
+export function masthead(heading, sub) {
+  return h("header", { class: "masthead" }, h("h1", { class: "large-title" }, heading), sub ? h("p", { class: "masthead-sub" }, sub) : null);
+}
+
+/**
+ * A card with nothing to act on: someone else's move, or a message.
+ * @param {string} heading
+ * @param {string | null} hint
+ */
+export function waitCard(heading, hint) {
+  return h("section", { class: "wait-card" }, h("p", { class: "lead-title" }, heading), hint ? h("p", { class: "lead-note" }, hint) : null);
+}
+
+// ------------------------------------------------------ sections and cells
+
+/**
+ * A titled block: a header, a section of rows, and an optional footnote.
+ * @param {string | null} header
+ * @param {Node} content
+ * @param {string | null} [footer]
+ */
+export function group(header, content, footer = null) {
+  return h(
+    "div",
+    { class: "group" },
+    header ? h("h3", { class: "group-header" }, header) : null,
+    content,
+    footer ? h("p", { class: "group-footer" }, footer) : null,
+  );
+}
+
+/**
+ * One row of a section (`<ul class="section">`), laid out like a Telegram list item.
+ * @param {{ before?: Child | Child[], title: Child, sub?: string | null, after?: Child, cls?: string }} parts
+ */
+export function cell(parts) {
+  return h(
+    "li",
+    { class: `cell${parts.cls ? ` ${parts.cls}` : ""}` },
+    parts.before ?? null,
+    h("div", { class: "cell-body" }, h("span", { class: "cell-title" }, parts.title), parts.sub ? h("span", { class: "cell-sub" }, parts.sub) : null),
+    typeof parts.after === "string" ? h("span", { class: "cell-after" }, parts.after) : (parts.after ?? null),
+  );
+}
+
+/**
+ * A small button inside the page. The screen's main actions go on the bottom buttons instead.
+ * @param {string} label
+ * @param {() => void} onClick
+ * @param {"soft" | "go" | "destructive"} [kind]
+ */
+export function pill(label, onClick, kind = "soft") {
+  return h("button", { type: "button", class: `pill pill-${kind}`, onclick: onClick }, label);
+}
+
 // -------------------------------------------------------------- avatars
 
 /**
@@ -95,6 +172,51 @@ export function avatar(person, size, options = {}) {
     { class: "avatar", style: `--size:${size}px;--from:${from};--to:${to}`, "aria-hidden": "true" },
     initial(person.name),
     options.badge ? h("span", { class: `avatar-badge${options.tone ? ` ${options.tone}` : ""}` }, options.badge) : null,
+  );
+}
+
+/**
+ * Everyone's score in a strip along the top; `lead` (whose turn it is) gets a ring in the mode's colour.
+ * @param {Array<{ id: number, name: string, score: number }>} scores
+ * @param {{ me: number, lead: number | null, label: string }} options
+ */
+export function scoreStrip(scores, options) {
+  return h(
+    "ol",
+    { class: "scores", "aria-label": options.label },
+    scores.map((entry) =>
+      h(
+        "li",
+        { class: `score${entry.id === options.lead ? " is-lead" : ""}${entry.id === options.me ? " is-me" : ""}` },
+        avatar(entry, 32),
+        h("span", { class: "score-text" }, h("span", { class: "score-name" }, entry.name), h("span", { class: "score-value" }, score(entry.score))),
+      ),
+    ),
+  );
+}
+
+/**
+ * Who has done their part (written, guessed, checked): avatars, ticked once done.
+ * @template {{ id: number, name: string }} P
+ * @param {P[]} people
+ * @param {(person: P) => boolean} done
+ * @param {string} label
+ */
+export function crew(people, done, label) {
+  return group(
+    label,
+    h(
+      "ul",
+      { class: "crew" },
+      people.map((person) =>
+        h(
+          "li",
+          { class: done(person) ? "done" : "" },
+          avatar(person, 40, done(person) ? { badge: "✓", tone: "done" } : {}),
+          h("span", { class: "crew-name" }, person.name),
+        ),
+      ),
+    ),
   );
 }
 

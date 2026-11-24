@@ -66,7 +66,8 @@ export type WebAction = { op: string } & Record<string, unknown>;
 /**
  * The Mini App side of a game that is played in the game page rather than
  * through chat buttons. The core handles the page's login, connection and
- * lobby; the game supplies what each person sees and what their taps do.
+ * lobby; the game supplies what each person sees and what their taps do. The
+ * page half lives in public/app/games/<id>.js.
  */
 export interface WebGame<Settings, State> {
   /**
@@ -77,11 +78,6 @@ export interface WebGame<Settings, State> {
   view(game: GameContext<Settings, State>, userId: number): unknown;
   /** Something a person did in the page. Resolves to a short notice for them, or null. */
   onAction(game: GameContext<Settings, State>, userId: number, action: WebAction): Promise<string | null>;
-  /**
-   * The settings as rows of choices for the lobby page. Picking one runs
-   * `applySetting(settings, [key, value])`, same as the room message's buttons.
-   */
-  settings?(settings: Settings, lang: Lang): WebSetting[];
 }
 
 export interface SettingsResult<Settings> {
@@ -89,22 +85,44 @@ export interface SettingsResult<Settings> {
   alert?: string;
 }
 
+/**
+ * A game. Start a new one from src/games/_template (see the README). Register
+ * it in src/games/index.ts; the command menu, /help and the welcome message
+ * pick it up from there.
+ */
 export interface GameModule<Settings = any, State = any> {
+  /** Lowercase letters, digits and `_`: it doubles as the game's command (/guess) and its page file's name. */
   readonly id: string;
   readonly minPlayers: number;
   readonly maxPlayers: number;
   title(lang: Lang): string;
+  /** Title plus a hint for the command menu, /help and the welcome message, e.g. "Unsaid (a word game)". Defaults to the title. */
+  blurb?(lang: Lang): string;
   /** The "how to play" part of /help. */
   helpText(lang: Lang): string;
   defaultSettings(aiAvailable: boolean): Settings;
   /** Lines for the room message describing the current settings. */
   describeSettings(settings: Settings, lang: Lang): string[];
-  /** Host-only settings keyboard; buttons must use `r<room>:st:<args>` payloads. */
-  settingsKeyboard(room: Room<Settings, State>, lang: Lang, aiAvailable: boolean): Keyboard;
+  /**
+   * The settings as rows of choices: the lobby page shows them, and unless
+   * `settingsKeyboard` is given the room message's settings panel is built from
+   * them too. Picking a choice runs `applySetting(settings, [key, value])`.
+   */
+  settingRows?(settings: Settings, lang: Lang): WebSetting[];
+  /**
+   * A settings panel of the game's own for the room message, when the rows
+   * above don't fit (choices whose labels need more words in chat, choices
+   * that depend on each other). Buttons use `settingCallback(room.id, ...)`.
+   */
+  settingsKeyboard?(room: Room<Settings, State>, lang: Lang, aiAvailable: boolean): Keyboard;
   applySetting(settings: Settings, args: string[], lang: Lang, aiAvailable: boolean): SettingsResult<Settings>;
 
   start(game: GameContext<Settings, State>): Promise<void>;
-  onAction(game: GameContext<Settings, State>, args: string[], from: TgUser, reply: CallbackReply): Promise<void>;
+  /**
+   * A press on one of the game's chat buttons (`game.callback(...)`). Games
+   * played in the Mini App usually have none and leave this out.
+   */
+  onAction?(game: GameContext<Settings, State>, args: string[], from: TgUser, reply: CallbackReply): Promise<void>;
   onDeadline(game: GameContext<Settings, State>, kind: string, data: Record<string, unknown>): Promise<void>;
   onPlayerJoined(game: GameContext<Settings, State>, userId: number): Promise<void>;
   onPlayerLeft(game: GameContext<Settings, State>, userId: number): Promise<void>;

@@ -16,7 +16,9 @@ export interface WebPerson {
 
 /**
  * One setting as a row of choices, so the host can change it from the lobby.
- * Picking an option sends `{ a: "set", key, value }`.
+ * Picking an option sends `{ a: "set", key, value }`. Unless the game draws its
+ * own settings panel, the room message's panel shows the same rows as buttons,
+ * each with just the option's label, so labels should make sense on their own.
  */
 export interface WebSetting {
   key: string;
@@ -26,6 +28,8 @@ export interface WebSetting {
 
 export interface WebRoom {
   id: number;
+  /** The game's id (`GameModule.id`); the page draws it with public/app/games/<id>.js. */
+  game: string;
   title: string;
   status: RoomStatus;
   host: WebPerson;

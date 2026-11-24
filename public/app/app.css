@@ -1,14 +1,17 @@
 /*
- * 心照不宣 / Unsaid — game page.
+ * The game page's shell: the lobby, the end screen, the bottom bar, and the
+ * building blocks in ui.js that every game page draws with. A game's own
+ * styles go in games/<game id>.css, loaded with its page.
  *
  * Looks like Telegram itself: every base colour is the user's Telegram theme
  * (--tg-theme-*, set by telegram-web-app.js), laid out as Telegram's grouped
  * lists (secondary background behind, section colour on cards). Type sizes and
  * spacing follow TelegramUI (github.com/telegram-mini-apps-dev/TelegramUI, MIT).
  *
- * Colour means one thing each: the mode's colour (orange Off-limits, purple
- * Unique Clues) = this turn and its clock; green = right / go; red = foul,
- * wrong, off-limits; Telegram's button colour = an action.
+ * Colour means one thing each: --mode = this turn and its clock (a game sets
+ * <html data-mode> and gives each of its modes a colour; Telegram's accent
+ * otherwise); green = right / go; red = foul, wrong; Telegram's button colour
+ * = an action.
  */
 
 :root {
@@ -76,24 +79,6 @@
 /* Telegram themes whose section colour equals the page colour: tint the cards so they stay visible. */
 :root.flat-sections {
   --section: var(--fill);
-}
-
-:root[data-mode="taboo"] {
-  --mode: var(--orange);
-  --mode-soft: rgba(255, 149, 0, 0.15);
-}
-
-:root[data-mode="unique"] {
-  --mode: var(--purple);
-  --mode-soft: rgba(175, 82, 222, 0.15);
-}
-
-:root[data-scheme="dark"][data-mode="taboo"] {
-  --mode-soft: rgba(255, 159, 10, 0.16);
-}
-
-:root[data-scheme="dark"][data-mode="unique"] {
-  --mode-soft: rgba(191, 90, 242, 0.18);
 }
 
 * {
@@ -402,7 +387,6 @@ ol {
 .btn:focus-visible,
 .pill:focus-visible,
 .seg-option:focus-visible,
-.slip-toggle:focus-visible,
 .composer-input:focus-visible,
 .composer-send:focus-visible {
   outline: 2px solid var(--button);
@@ -423,10 +407,6 @@ ol {
 .tint-go {
   background: var(--green-soft);
   color: var(--green);
-}
-
-.tint.pop {
-  animation: pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.4);
 }
 
 /* ----------------------------------------------------------- avatars */
@@ -592,14 +572,6 @@ ol {
   background: var(--hint);
 }
 
-.how-taboo .how-dot {
-  background: var(--orange);
-}
-
-.how-unique .how-dot {
-  background: var(--purple);
-}
-
 /* --------------------------------------------------------------- hud */
 
 .hud {
@@ -716,82 +688,15 @@ ol {
 
 /* ------------------------------------------------------------- cards */
 
-.card {
-  padding: 14px var(--gutter) 16px;
-  border-radius: 20px;
-  background: var(--section);
-}
-
-.card-caption {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--hint);
-  font-size: 13px;
-  line-height: 16px;
-}
-
-.card-word {
-  margin: 10px 0 14px;
-  font-size: clamp(40px, 13vw, 52px);
-  line-height: 1.15;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
-.card.small .card-word {
-  margin: 6px 0 4px;
-  font-size: 34px;
-}
-
-/* Off-limits words: marked with the ban sign, not crossed out, so they stay easy to read. */
-.taboo {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.taboo li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 9px 12px;
-  border-radius: 11px;
-  background: var(--fill);
-  font-size: 16px;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.taboo .icon {
-  color: var(--destructive);
-}
-
-/* What everyone else sees while someone holds the card. */
-.lead-card,
+/* A card with nothing to act on (ui.js waitCard): someone else's move, or a message. */
 .wait-card {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  border-radius: 20px;
-  background: var(--section);
-}
-
-.wait-card {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-}
-
-.lead-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--section);
 }
 
 .lead-title {
@@ -807,196 +712,7 @@ ol {
   line-height: 20px;
 }
 
-/* A word was guessed: the next card slides in. */
-.card.deal {
-  animation: deal 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-/* A foul: the card shakes with a red edge. */
-.flash-foul {
-  animation: foul 480ms ease both;
-}
-
-/* The card turns over when the guesser's turn is done. */
-.card.reveal {
-  animation: turn-over 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-
-@keyframes deal {
-  from {
-    transform: translateX(28px) rotate(2deg);
-    opacity: 0;
-  }
-  to {
-    transform: none;
-    opacity: 1;
-  }
-}
-
-@keyframes foul {
-  0%,
-  100% {
-    transform: none;
-    box-shadow: inset 0 0 0 2px transparent;
-  }
-  15%,
-  45%,
-  75% {
-    transform: translateX(-6px);
-    box-shadow: inset 0 0 0 2px var(--destructive);
-  }
-  30%,
-  60% {
-    transform: translateX(6px);
-    box-shadow: inset 0 0 0 2px var(--destructive);
-  }
-}
-
-@keyframes turn-over {
-  from {
-    transform: perspective(700px) rotateY(-90deg);
-    opacity: 0.4;
-  }
-  to {
-    transform: perspective(700px) rotateY(0deg);
-    opacity: 1;
-  }
-}
-
-@keyframes pop {
-  0% {
-    transform: scale(1);
-  }
-  40% {
-    transform: scale(1.18);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes enter {
-  from {
-    transform: translateY(-8px);
-    opacity: 0;
-  }
-  to {
-    transform: none;
-    opacity: 1;
-  }
-}
-
-/* --------------------------------------------------------------- feed */
-
-.feed-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 7px var(--gutter);
-}
-
-.feed-row + .feed-row::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 54px;
-  height: 1px;
-  background: var(--separator);
-  transform: scaleY(0.5);
-  transform-origin: top;
-}
-
-.feed-row.enter {
-  animation: enter 260ms ease-out both;
-}
-
-.feed-row.hit.enter {
-  animation:
-    enter 260ms ease-out both,
-    hit-glow 1200ms ease-out;
-}
-
-@keyframes hit-glow {
-  from {
-    background: var(--green-soft);
-  }
-  to {
-    background: transparent;
-  }
-}
-
-.feed-row .who {
-  flex: 0 0 auto;
-  max-width: 5.5em;
-  overflow: hidden;
-  color: var(--hint);
-  font-size: 14px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.feed-row .said {
-  display: flex;
-  flex: 1;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.feed-row .tag {
-  flex: none;
-  color: var(--hint);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.feed-row .mark {
-  flex: none;
-  color: var(--hint);
-  font-size: 14px;
-}
-
-.feed-row.hit .said,
-.feed-row.hit .mark {
-  color: var(--green);
-}
-
-.feed-row.hint .said {
-  font-weight: 400;
-}
-
-.feed-row.out .said {
-  color: var(--hint);
-}
-
-.feed-row.foul .said,
-.feed-row.foul .tag {
-  color: var(--destructive);
-}
-
 /* ------------------------------------------------------------ results */
-
-.result.guessed .cell-title {
-  font-weight: 600;
-}
-
-.result:not(.guessed) .cell-title {
-  color: var(--hint);
-}
-
-.result.guessed .cell-after {
-  color: var(--green);
-}
-
-.result.buzzed .cell-after,
-.result.slipped .cell-after {
-  color: var(--destructive);
-}
 
 .points {
   font-weight: 600;
@@ -1008,30 +724,6 @@ ol {
 }
 
 .points.minus {
-  color: var(--destructive);
-}
-
-.verdict {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.verdict strong {
-  font-size: 22px;
-  line-height: 28px;
-}
-
-.verdict span {
-  color: var(--subtitle);
-  font-size: 15px;
-}
-
-.verdict.right strong {
-  color: var(--green);
-}
-
-.verdict.wrong strong {
   color: var(--destructive);
 }
 
@@ -1053,66 +745,6 @@ ol {
   font-size: 17px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-
-/* -------------------------------------------------------------- clues */
-
-.slips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.slip {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 88px;
-  padding: 10px 14px 8px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--section);
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-}
-
-.slip-toggle {
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.slip-text {
-  font-size: 20px;
-  line-height: 25px;
-  font-weight: 600;
-}
-
-.slip-meta {
-  color: var(--hint);
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.slip.out {
-  opacity: 0.55;
-}
-
-.slip.out .slip-text {
-  text-decoration-color: var(--destructive);
-  text-decoration-thickness: 2px;
-}
-
-.slip.out .slip-meta {
-  color: var(--destructive);
-}
-
-.slip.mine {
-  box-shadow: inset 0 0 0 2px var(--destructive);
-}
-
-.my-clue strong {
-  font-size: 20px;
 }
 
 /* ------------------------------------------------------------ composer */
@@ -1190,14 +822,6 @@ ol {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card.reveal,
-  .card.deal,
-  .flash-foul,
-  .tint.pop,
-  .feed-row.enter,
-  .feed-row.hit.enter {
-    animation: none;
-  }
   .ring-bar,
   .toast {
     transition: none;

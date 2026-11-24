@@ -1,6 +1,8 @@
 import { Api } from "grammy/web";
-import type { BotCommand, Update } from "grammy/types";
+import type { Update } from "grammy/types";
+import { commandMenu } from "./core/commands";
 import type { Env } from "./env";
+import { GAMES } from "./games";
 import { routeChatId } from "./routing";
 import { verifyInitData } from "./web/init-data";
 import { CLOSE_SESSION_EXPIRED } from "./web/protocol";
@@ -11,31 +13,6 @@ export { ChatDurableObject } from "./chat-object";
 
 /** Update types the bot consumes; everything else Telegram can send is filtered out at the source. */
 const ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"] as const;
-
-const COMMANDS: Record<"zh" | "en", BotCommand[]> = {
-  zh: [
-    { command: "play", description: "开一局真心话大冒险" },
-    { command: "guess", description: "开一局心照不宣（猜词，在 Mini App 里玩）" },
-    { command: "invite", description: "邀请玩家（@用户名 或回复消息）" },
-    { command: "kick", description: "把玩家请出房间（房主）" },
-    { command: "end", description: "结束本局（房主或管理员）" },
-    { command: "log", description: "本局完整记录" },
-    { command: "stats", description: "历史统计" },
-    { command: "lang", description: "切换语言 / Switch language" },
-    { command: "help", description: "玩法说明" },
-  ],
-  en: [
-    { command: "play", description: "Start a game of Truth or Dare" },
-    { command: "guess", description: "Start Unsaid, a word game played in the Mini App" },
-    { command: "invite", description: "Invite players (@username or reply)" },
-    { command: "kick", description: "Remove a player (host)" },
-    { command: "end", description: "End the game (host or admin)" },
-    { command: "log", description: "Full log of this game" },
-    { command: "stats", description: "All-time stats" },
-    { command: "lang", description: "Switch language / 切换语言" },
-    { command: "help", description: "How to play" },
-  ],
-};
 
 export default {
   async fetch(request, env): Promise<Response> {
@@ -88,9 +65,9 @@ async function handleSetup(request: Request, env: Env, url: URL): Promise<Respon
     allowed_updates: [...ALLOWED_UPDATES],
     drop_pending_updates: url.searchParams.get("drop") === "1",
   });
-  await api.setMyCommands(COMMANDS.zh);
-  await api.setMyCommands(COMMANDS.zh, { language_code: "zh" });
-  await api.setMyCommands(COMMANDS.en, { language_code: "en" });
+  await api.setMyCommands(commandMenu(GAMES, "zh"));
+  await api.setMyCommands(commandMenu(GAMES, "zh"), { language_code: "zh" });
+  await api.setMyCommands(commandMenu(GAMES, "en"), { language_code: "en" });
   const [me, info] = await Promise.all([api.getMe(), api.getWebhookInfo()]);
   return Response.json({ ok: true, bot: `@${me.username}`, webhook: info.url, pending: info.pending_update_count });
 }

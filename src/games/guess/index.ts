@@ -1,6 +1,6 @@
 import type { GameModule, SettingsResult, WebAction } from "../../core/game";
 import type { Lang } from "../../core/i18n";
-import { roomCallback } from "../../telegram/callback";
+import { settingCallback } from "../../telegram/callback";
 import { button, type Keyboard } from "../../telegram/port";
 import { G } from "../../ui/glyphs";
 import type { WebSetting } from "../../web/protocol";
@@ -341,7 +341,7 @@ async function onWebAction(game: GuessContext, userId: number, action: WebAction
 
 function settingsKeyboard(roomId: number, settings: GuessSettings, lang: Lang): Keyboard {
   const t = guessMessages[lang];
-  const cb = (...args: Array<string | number>) => roomCallback(roomId, "st", ...args);
+  const cb = (...args: Array<string | number>) => settingCallback(roomId, ...args);
   const option = (label: string, on: boolean, data: string) => button(on ? `${G.check} ${label}` : label, data, on ? "primary" : undefined);
   return [
     MODE_SETTINGS.map((mode) => option(t.modes[mode], settings.mode === mode, cb("m", mode))),
@@ -350,8 +350,8 @@ function settingsKeyboard(roomId: number, settings: GuessSettings, lang: Lang): 
   ];
 }
 
-/** The same choices as the settings keyboard, for the lobby page. Turn length only matters when Off-limits is played. */
-function webSettings(settings: GuessSettings, lang: Lang): WebSetting[] {
+/** The same choices as the settings keyboard, worded for the lobby page's rows. Turn length only matters when Off-limits is played. */
+function settingRows(settings: GuessSettings, lang: Lang): WebSetting[] {
   const t = guessMessages[lang];
   const rows: WebSetting[] = [
     {
@@ -399,6 +399,7 @@ export const guessGame: GameModule<GuessSettings, GuessState> = {
   minPlayers: 3,
   maxPlayers: 16,
   title: (lang) => guessMessages[lang].title,
+  blurb: (lang) => guessMessages[lang].blurb,
   helpText: (lang) => guessMessages[lang].help(POINTS),
 
   defaultSettings: () => ({ mode: "mix", rounds: 1, seconds: 90 }),
@@ -410,6 +411,8 @@ export const guessGame: GameModule<GuessSettings, GuessState> = {
     return lines;
   },
 
+  settingRows,
+  // Chat buttons stand alone, so they get their own wording ("每人 2 次" rather than the page's "2 次").
   settingsKeyboard: (room, lang) => settingsKeyboard(room.id, room.settings, lang),
   applySetting: (settings, args) => applySetting(settings, args),
 
@@ -426,10 +429,7 @@ export const guessGame: GameModule<GuessSettings, GuessState> = {
     await startTurn(game);
   },
 
-  // Nothing in the chat carries game buttons; it's all in the page.
-  async onAction(game, _args, _from, reply) {
-    await reply.answer(msgs(game).useTheApp);
-  },
+  // No onAction: nothing in the chat carries game buttons, it's all in the page.
 
   async onDeadline(game, kind, data) {
     const turn = game.room.state?.turn;
@@ -489,5 +489,5 @@ export const guessGame: GameModule<GuessSettings, GuessState> = {
   renderLog: (game) => renderLog(game, game.core.logEmpty),
   renderStats,
 
-  web: { view: guessView, onAction: onWebAction, settings: webSettings },
+  web: { view: guessView, onAction: onWebAction },
 };

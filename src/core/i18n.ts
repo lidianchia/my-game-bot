@@ -20,16 +20,32 @@ const zh = {
   sep: "、",
   groupOnly: "这个命令要在群里用。",
   privateWelcome: "你好！把我拉进你们的群，在群里发 /play 就能开一局。\n玩法说明：/help",
-  groupWelcome: "大家好，我是游戏 bot。\n/play 开一局真心话大冒险，/guess 开一局心照不宣（猜词），玩法说明：/help",
+  // The game lists in these come from src/games/index.ts (core/commands.ts).
+  groupWelcome: (games: string) => `大家好，我是游戏 bot。\n${games}，玩法说明：/help`,
+  welcomeGame: (command: string, blurb: string) => `${command} 开一局${blurb}`,
+  welcomeSep: "，",
   notAllowed: (chatId: number) =>
     `这个 bot 只给指定的群用。本群 ID：<code>${chatId}</code>\nbot 的主人把这个 ID 加进 ALLOWED_CHAT_IDS 就能用了。`,
-  helpCommands:
+  helpCommands: (games: string) =>
     "<b>命令</b>\n" +
-    "/play 真心话大冒险 · /guess 心照不宣（猜词）\n" +
+    `${games}\n` +
     "/invite 邀请 · /kick 踢人\n" +
     "/log 本局记录 · /stats 历史统计\n" +
     "/end 结束本局 · /lang 切换语言\n\n" +
     "把 bot 设成群管理员（只给「置顶消息」权限就够），它会自动置顶实时战报。",
+  helpGame: (command: string, blurb: string) => `${command} ${blurb}`,
+  helpSep: " · ",
+  // The command menu (/setup publishes it): one line per game, then these.
+  menuGame: (blurb: string) => `开一局${blurb}`,
+  menu: [
+    { command: "invite", description: "邀请玩家（@用户名 或回复消息）" },
+    { command: "kick", description: "把玩家请出房间（房主）" },
+    { command: "end", description: "结束本局（房主或管理员）" },
+    { command: "log", description: "本局完整记录" },
+    { command: "stats", description: "历史统计" },
+    { command: "lang", description: "切换语言 / Switch language" },
+    { command: "help", description: "玩法说明" },
+  ],
   langSwitched: "已切换到中文",
   dmLinked: "已经连上了，回群里继续玩吧。",
 
@@ -103,6 +119,7 @@ const zh = {
   somethingWrong: "出了点问题，再点一次试试",
   webAppMissing:
     "这个游戏在 Mini App 里玩，但 bot 还没配好：先在 BotFather 用 /newapp 建一个，再把短名填进 wrangler.jsonc 的 MINIAPP_SHORT_NAME。",
+  playInApp: "这个游戏在「打开游戏」里玩",
   ok: "好",
 
   joinRequestMessage: (who: string, roomId: number, host: string) => `${who} 想加入房间 #${roomId}，${host} 同意吗？`,
@@ -140,16 +157,30 @@ const en: CoreMessages = {
   sep: ", ",
   groupOnly: "This command only works in a group.",
   privateWelcome: "Hi! Add me to your group and send /play there to start a game.\nHow to play: /help",
-  groupWelcome: "Hi everyone, I'm the game bot.\n/play starts Truth or Dare, /guess starts Unsaid (a word game). How to play: /help",
+  groupWelcome: (games: string) => `Hi everyone, I'm the game bot.\n${games}. How to play: /help`,
+  welcomeGame: (command: string, blurb: string) => `${command} starts ${blurb}`,
+  welcomeSep: ", ",
   notAllowed: (chatId: number) =>
     `This bot only plays in approved groups. This group's ID: <code>${chatId}</code>\nThe bot's owner can add it to ALLOWED_CHAT_IDS.`,
-  helpCommands:
+  helpCommands: (games: string) =>
     "<b>Commands</b>\n" +
-    "/play Truth or Dare · /guess Unsaid (word game)\n" +
+    `${games}\n` +
     "/invite invite · /kick remove\n" +
     "/log this game's log · /stats all-time stats\n" +
     "/end end the game · /lang switch language\n\n" +
     "Make the bot a group admin (only “Pin messages” is needed) and it will pin the live scoreboard.",
+  helpGame: (command: string, blurb: string) => `${command} ${blurb}`,
+  helpSep: " · ",
+  menuGame: (blurb: string) => `Start a game of ${blurb}`,
+  menu: [
+    { command: "invite", description: "Invite players (@username or reply)" },
+    { command: "kick", description: "Remove a player (host)" },
+    { command: "end", description: "End the game (host or admin)" },
+    { command: "log", description: "Full log of this game" },
+    { command: "stats", description: "All-time stats" },
+    { command: "lang", description: "Switch language / 切换语言" },
+    { command: "help", description: "How to play" },
+  ],
   langSwitched: "Switched to English",
   dmLinked: "Connected. Head back to the group to keep playing.",
 
@@ -223,6 +254,7 @@ const en: CoreMessages = {
   somethingWrong: "Something went wrong, try again",
   webAppMissing:
     "This game runs in a Mini App that isn't set up yet: create one with /newapp in BotFather, then put its short name in MINIAPP_SHORT_NAME in wrangler.jsonc.",
+  playInApp: "This game is played in “Open game”",
   ok: "OK",
 
   joinRequestMessage: (who: string, roomId: number, host: string) => `${who} wants to join room #${roomId}. ${host}, approve?`,

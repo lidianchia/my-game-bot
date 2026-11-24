@@ -20,6 +20,11 @@ export function roomCallback(roomId: number, action: string, ...args: Array<stri
   return data;
 }
 
+/** A button in a game's settings panel: `r<room>:st:<args>`; the press runs the game's `applySetting(settings, args)`. */
+export function settingCallback(roomId: number, ...args: Array<string | number>): string {
+  return roomCallback(roomId, "st", ...args);
+}
+
 export function parseRoomCallback(data: string): RoomCallback | null {
   const [head, action, ...args] = data.split(":");
   const match = head ? /^r(\d+)$/.exec(head) : null;

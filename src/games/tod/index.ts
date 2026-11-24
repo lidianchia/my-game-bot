@@ -2,7 +2,7 @@ import type { CallbackReply, GameModule } from "../../core/game";
 import type { Lang } from "../../core/i18n";
 import type { TgUser } from "../../telegram/intents";
 import { button, type Keyboard } from "../../telegram/port";
-import { roomCallback } from "../../telegram/callback";
+import { settingCallback } from "../../telegram/callback";
 import { G, heat } from "../../ui/glyphs";
 import { generateQuestion } from "./ai";
 import { drawCard } from "./deck";
@@ -298,7 +298,7 @@ async function handleAction(game: TodContext, args: string[], from: TgUser, repl
 
 function settingsKeyboard(roomId: number, settings: TodSettings, lang: Lang): Keyboard {
   const t = todMessages[lang];
-  const cb = (...args: Array<string | number>) => roomCallback(roomId, "st", ...args);
+  const cb = (...args: Array<string | number>) => settingCallback(roomId, ...args);
   // The chosen option is blue with a check; the check keeps it readable on clients without button colours.
   const option = (label: string, on: boolean, data: string) =>
     button(on ? `${G.check} ${label}` : label, data, on ? "primary" : undefined);

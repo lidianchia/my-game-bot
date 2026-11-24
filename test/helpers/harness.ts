@@ -1,6 +1,7 @@
 import type { MessageEntity, Update } from "grammy/types";
 import type { Llm } from "../../src/ai/llm";
 import { ChatApp, type WebRequest } from "../../src/core/app";
+import type { GameModule } from "../../src/core/game";
 import type { Lang } from "../../src/core/i18n";
 import { activeRoom, joinedPlayers, loadRoom, type Room } from "../../src/core/rooms";
 import { migrate } from "../../src/core/schema";
@@ -43,6 +44,8 @@ export interface HarnessOptions {
   seed?: number;
   /** Mini App short name; null = not configured. */
   webAppName?: string | null;
+  /** The games on offer; the real list by default. Tests for a game that isn't registered (the template) pass their own. */
+  games?: GameModule[];
 }
 
 export type Harness = ReturnType<typeof createHarness>;
@@ -63,7 +66,7 @@ export function createHarness(options: HarnessOptions = {}) {
     sql,
     tg,
     llm: options.llm ?? null,
-    games: GAMES,
+    games: options.games ?? GAMES,
     config: {
       defaultLang: options.lang ?? "zh",
       allowedChatIds: options.allowedChatIds ? new Set(options.allowedChatIds) : null,

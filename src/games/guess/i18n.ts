@@ -20,6 +20,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 /** Chat-side text for the word game. The page has its own strings in public/app/i18n.js. No emoji (see core/i18n.ts). */
 const zh = {
   title: "心照不宣",
+  blurb: "心照不宣（猜词）",
   help: (p: Points) =>
     "<b>心照不宣怎么玩</b>\n" +
     "1. 群里发 /guess 开房，拉人和真心话大冒险一样，人齐了房主点「开始」。大家点房间消息上的「打开游戏」进游戏页面。\n" +
@@ -97,13 +98,13 @@ const zh = {
   notWrong: "只有猜错的才能改判",
   turnNotDone: "这一轮还没结束",
   nothingToSkip: "现在没有可以跳过的",
-  useTheApp: "这个游戏在「打开游戏」里玩",
 };
 
 export type GuessMessages = typeof zh;
 
 const en: GuessMessages = {
   title: "Unsaid",
+  blurb: "Unsaid (a word game)",
   help: (p: Points) =>
     "<b>How to play Unsaid</b>\n" +
     "1. Send /guess in the group to open a room. Joining works like Truth or Dare; the host taps “Start” when everyone's in. Everyone taps “Open game” on the room message to get to the game page.\n" +
@@ -180,7 +181,6 @@ const en: GuessMessages = {
   notWrong: "Only a wrong guess can be overruled",
   turnNotDone: "This turn isn't over yet",
   nothingToSkip: "There's nothing to skip right now",
-  useTheApp: "This game is played in “Open game”",
 };
 
 export const guessMessages: Record<Lang, GuessMessages> = { zh, en };

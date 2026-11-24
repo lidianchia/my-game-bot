@@ -1,15 +1,17 @@
 // @ts-check
 /**
- * The game page's own words, in the chat's language. Notices for a person's
- * taps come from the server already translated. Same rule as the bot: no
- * emoji; icons are the monochrome glyphs ✓ ✗ ● ○ ♛.
+ * The shell's words, in the chat's language: connecting, the lobby, the end
+ * screen. Each game page has its own (games/<id>.js), and notices for a
+ * person's taps come from the server already translated. Same rule as the bot:
+ * no emoji; icons are the monochrome glyphs ✓ ✗ ● ○ ♛.
  */
 
 /** @typedef {typeof zh} Strings */
 
 const zh = {
   lang: "zh",
-  appTitle: "心照不宣",
+  /** Before the room is known, so it can't be the game's name. */
+  appTitle: "游戏",
   connecting: "正在连接…",
   reconnecting: "连接断了，正在重连…",
   offline: "还没连上，稍等一下再点",
@@ -17,32 +19,20 @@ const zh = {
     openFromGroup: "从群里房间消息上的「打开游戏」进来，才能加入这一局。",
     auth: "登录信息过期了。回群里重新点「打开游戏」。",
     member: "你不在这个群里，进不了这一局。",
-    room: "这个房间已经不在了。回群里发 /guess 开一局新的。",
+    room: "这个房间已经不在了。回群里开一局新的。",
     link: "这个链接不完整。回群里点房间消息上的「打开游戏」。",
     network: "连不上服务器，正在重试…",
+    page: "这个游戏的页面没加载出来，正在重试…",
   },
-  room: (/** @type {number} */ id) => `房间 #${id}`,
-  turnOf: (/** @type {number} */ no, /** @type {number} */ total) => `第 ${no}/${total} 轮`,
-  modes: { taboo: "禁词", unique: "别撞车" },
 
   roomLine: (/** @type {number} */ id, /** @type {number} */ count, /** @type {number} */ max) => `房间 #${id} · ${count}/${max} 人`,
-  // The lobby's guide. Points here must match POINTS in src/games/guess/types.ts (test/unit/page.test.ts checks).
   recruitTitle: "怎么拉人",
   recruitSteps: [
     "回群里点房间消息上的「邀请」选人，或者发 /invite @用户名。对方点「接受」就进来了",
     "也可以让大家点房间消息上的「打开游戏」，在这里点「申请加入」，你点「同意」",
   ],
   recruitFooter: (/** @type {number} */ min, /** @type {number} */ count) => `至少 ${min} 个人才能开始，现在 ${count} 个`,
-  howTitle: "怎么玩",
-  howTurns: { title: "轮流当主角", text: "每人轮流当主角，轮完自动结束，总结发在群里" },
-  howModes: {
-    taboo:
-      "主角看到一个词和 4 个禁用词，在群语音里描述（也可以打字提示），不能说出这个词和禁用词。其他人在这里打字猜：猜中一个，猜的人和主角各 +1；主角说漏了，大家点「犯规」，主角 −1",
-    unique:
-      "这次主角来猜。其他人都看得到词，每人写一个词当线索：写得一样的互相抵消，意思太像的大家划掉。主角只看得到剩下的线索，猜一次：猜对了主角 +2，线索留下来的人各 +1",
-  },
   players: (/** @type {number} */ count, /** @type {number} */ max) => `玩家 ${count}/${max}`,
-  host: "房主",
   settings: "设置",
   startGame: "开始游戏",
   waitForHost: (/** @type {string} */ host) => `人齐了 ${host} 会开始`,
@@ -53,83 +43,15 @@ const zh = {
   approve: "同意",
   deny: "拒绝",
 
-  scores: "比分",
-  you: "你",
-  onlyLeadSees: (/** @type {string} */ name) => `只有 ${name} 看得到词`,
-  onlyYou: "只有你看得到",
-  hiddenFrom: (/** @type {string} */ name) => `${name} 看不到`,
-  offLimits: "禁用词",
   watching: "你没在这一局里，只能看",
-
-  // Off-limits
-  yourTurnToDescribe: "轮到你描述了",
-  describeRules: (/** @type {number} */ seconds) =>
-    `点「开始」后有 ${seconds} 秒。在语音里描述，不能说出这个词和它的禁用词，也可以在下面打字提示。`,
-  begin: "开始",
-  readyToDescribe: (/** @type {string} */ name) => `${name} 准备描述`,
-  guessHowTo: "开始后在下面打字猜。描述的人说出了禁用词，就点「犯规」。",
-  foulHowTo: "描述的人说出了禁用词，就点「犯规」",
-  describing: (/** @type {string} */ name) => `${name} 在描述`,
-  describeHowTo: "猜中就换下一个。不好描述就跳过。",
-  skipWord: "跳过这个",
-  foul: "犯规",
-  hintPlaceholder: "打字提示（可选）",
-  guessPlaceholder: "你猜是…",
-  send: "发送",
-  guess: "猜",
-  feedEmpty: "大家猜的词会出现在这里",
-  feedHint: "提示",
-  feedCorrect: "猜中",
-  feedSkip: "跳过",
-  feedBuzz: "喊犯规",
-  feedSlip: "打出了禁用词",
-  outcomes: { guessed: "猜中", skipped: "跳过", buzzed: "犯规", slipped: "说漏", timeout: "没猜完" },
-  wordsGuessed: (/** @type {number} */ count) => `猜中 ${count} 个`,
-
-  // Unique Clues
-  writeFor: (/** @type {string} */ name) => `给 ${name} 写一条线索`,
-  writeRules: "只写一个词。和别人写得一样的会互相抵消，也不能带上答案里的字。",
-  cluePlaceholder: "一个词",
-  write: "写好了",
-  yourClue: "你写的",
-  canChange: "时间到之前可以改",
-  wrote: (/** @type {number} */ done, /** @type {number} */ total) => `${done}/${total} 人写好了`,
-  othersWriting: "大家在给你写线索",
-  othersReviewing: "大家在检查线索",
-  leadWaitHint: "线索准备好就轮到你猜。",
-  reviewTitle: "检查线索",
-  reviewRules: "撞车和露底的已经去掉了。意思一样的点一下划掉，再点一下恢复。",
-  reviewed: "检查好了",
-  confirmed: (/** @type {number} */ done, /** @type {number} */ total) => `${done}/${total} 人检查好了`,
-  removed: { duplicate: "撞车", answer: "露底", struck: "划掉" },
-  yourGuess: "轮到你猜了",
-  oneTry: "只有一次机会。",
-  giveUp: "不猜了",
-  waitForGuess: (/** @type {string} */ name) => `等 ${name} 猜`,
-  noCluesLeft: "一条线索都没剩下",
-  guessedAs: (/** @type {string} */ name, /** @type {string} */ guess) => `${name} 猜「${guess}」`,
-  uniqueOutcomes: { correct: "猜对了", wrong: "猜错了", passed: "没有猜", timeout: "时间到了" },
-  ruledRight: "房主判对了",
-  ruleRight: "算对",
-  answer: "答案",
-
-  // End of a turn / the game
-  turnOver: "这一轮结束",
-  skipReasons: { host: "房主跳过了这一轮", left: "主角离开了", idle: "描述的人没点开始", ended: "游戏提前结束了" },
-  turnPoints: "这一轮得分",
-  noPoints: "这一轮没人得分",
-  nextTurn: "下一轮",
-  finish: "结束，看总结",
   gameOver: "这一局结束了",
-  summaryInGroup: "总结发在群里了。",
-  finalScores: "最终比分",
   nextRoom: "进入新的一局",
 };
 
 /** @type {Strings} */
 const en = {
   lang: "en",
-  appTitle: "Unsaid",
+  appTitle: "Game",
   connecting: "Connecting…",
   reconnecting: "Connection lost, reconnecting…",
   offline: "Not connected yet; try again in a moment",
@@ -137,13 +59,11 @@ const en = {
     openFromGroup: "Open this from the “Open game” button on the room message in your group.",
     auth: "Your login expired. Tap “Open game” in the group again.",
     member: "You're not in this group, so you can't join this game.",
-    room: "This room no longer exists. Send /guess in the group to start a new one.",
+    room: "This room no longer exists. Start a new one in the group.",
     link: "This link is incomplete. Tap “Open game” on the room message in the group.",
     network: "Can't reach the server, retrying…",
+    page: "Couldn't load this game's page, retrying…",
   },
-  room: (id) => `Room #${id}`,
-  turnOf: (no, total) => `Turn ${no}/${total}`,
-  modes: { taboo: "Off-limits", unique: "Unique Clues" },
 
   roomLine: (id, count, max) => `Room #${id} · ${count}/${max} players`,
   recruitTitle: "Getting people in",
@@ -152,16 +72,7 @@ const en = {
     "Or have people tap “Open game” on the room message and “Ask to join” here; you tap “Approve”",
   ],
   recruitFooter: (min, count) => `Needs at least ${min} players; ${count} so far`,
-  howTitle: "How to play",
-  howTurns: { title: "Take turns leading", text: "Everyone takes a turn as the lead; the game ends itself and posts a summary in the group" },
-  howModes: {
-    taboo:
-      "The lead sees a word and 4 off-limits words and describes it in the group's voice chat (typed hints work too) without saying any of them. Everyone else types guesses here: each word guessed is +1 for the guesser and the lead. If the lead slips, tap “Foul”: −1 for the lead",
-    unique:
-      "This time the lead guesses. Everyone else sees the word and writes a one-word clue; matching clues cancel out, and you strike ones that mean the same. The lead sees only the clues left and gets one guess: +2 if right, and +1 to each writer whose clue survived",
-  },
   players: (count, max) => `Players ${count}/${max}`,
-  host: "host",
   settings: "Settings",
   startGame: "Start game",
   waitForHost: (host) => `${host} starts when everyone's in`,
@@ -172,73 +83,8 @@ const en = {
   approve: "Approve",
   deny: "Deny",
 
-  scores: "Scores",
-  you: "You",
-  onlyLeadSees: (name) => `Only ${name} can see the word`,
-  onlyYou: "Only you can see this",
-  hiddenFrom: (name) => `Hidden from ${name}`,
-  offLimits: "Off-limits words",
   watching: "You're not in this game; you can watch",
-
-  yourTurnToDescribe: "Your turn to describe",
-  describeRules: (seconds) =>
-    `You get ${seconds}s after you tap Start. Describe it in voice chat without saying the word or any of its off-limits words. You can also type hints below.`,
-  begin: "Start",
-  readyToDescribe: (name) => `${name} is about to describe`,
-  guessHowTo: "Type guesses below once it starts. If they say an off-limits word, tap “Foul”.",
-  foulHowTo: "If they say an off-limits word, tap “Foul”",
-  describing: (name) => `${name} is describing`,
-  describeHowTo: "A correct guess deals the next word. Skip any word that's too hard.",
-  skipWord: "Skip this one",
-  foul: "Foul",
-  hintPlaceholder: "Type a hint (optional)",
-  guessPlaceholder: "Your guess…",
-  send: "Send",
-  guess: "Guess",
-  feedEmpty: "Guesses show up here",
-  feedHint: "hint",
-  feedCorrect: "got it",
-  feedSkip: "skipped",
-  feedBuzz: "called a foul",
-  feedSlip: "typed an off-limits word",
-  outcomes: { guessed: "guessed", skipped: "skipped", buzzed: "foul", slipped: "slipped", timeout: "time up" },
-  wordsGuessed: (count) => `${count} guessed`,
-
-  writeFor: (name) => `Write a clue for ${name}`,
-  writeRules: "One word only. Clues that match someone else's cancel out, and none may contain the answer.",
-  cluePlaceholder: "One word",
-  write: "Done",
-  yourClue: "Your clue",
-  canChange: "You can change it until time's up",
-  wrote: (done, total) => `${done}/${total} written`,
-  othersWriting: "Everyone is writing clues for you",
-  othersReviewing: "Everyone is checking the clues",
-  leadWaitHint: "You'll guess as soon as the clues are ready.",
-  reviewTitle: "Check the clues",
-  reviewRules: "Clashes and giveaways are already out. Tap any that mean the same thing to strike them; tap again to undo.",
-  reviewed: "Looks good",
-  confirmed: (done, total) => `${done}/${total} done checking`,
-  removed: { duplicate: "clash", answer: "gives it away", struck: "struck" },
-  yourGuess: "Your guess",
-  oneTry: "You get one try.",
-  giveUp: "Pass",
-  waitForGuess: (name) => `Waiting for ${name} to guess`,
-  noCluesLeft: "No clues survived",
-  guessedAs: (name, guess) => `${name} guessed “${guess}”`,
-  uniqueOutcomes: { correct: "Right", wrong: "Wrong", passed: "Passed", timeout: "Time's up" },
-  ruledRight: "The host ruled it right",
-  ruleRight: "Count it",
-  answer: "Answer",
-
-  turnOver: "Turn over",
-  skipReasons: { host: "The host skipped this turn", left: "The lead left", idle: "The describer never started", ended: "The game ended early" },
-  turnPoints: "Points this turn",
-  noPoints: "Nobody scored this turn",
-  nextTurn: "Next turn",
-  finish: "Finish and see the summary",
   gameOver: "This game is over",
-  summaryInGroup: "The summary is in the group.",
-  finalScores: "Final scores",
   nextRoom: "Join the next game",
 };
 

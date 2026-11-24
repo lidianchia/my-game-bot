@@ -1,0 +1,58 @@
+/*
+ * 猜大小 / High or Low: the template game's own styles, loaded with
+ * games/_template.js because it sets `styles: true`. The shell's styles and the
+ * shared building blocks' are in ../app.css; use their colour variables
+ * (--section, --text, --hint, --button, --green, --destructive, --mode...) so
+ * the game follows the user's Telegram theme.
+ *
+ * Start every class with the game's own prefix ("hilo-") so two games' styles
+ * can never clash: once a page has shown both games, both sheets are loaded.
+ */
+
+/* The lead's six numbers. */
+.hilo-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.hilo-number {
+  min-height: 64px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--section);
+  color: var(--text);
+  font: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.hilo-number:focus-visible {
+  outline: 2px solid var(--button);
+  outline-offset: 2px;
+}
+
+/* The number on a card: the lead's own while they wait, everyone's once the turn is done. */
+.hilo-card {
+  padding: 14px var(--gutter) 18px;
+  border-radius: 20px;
+  background: var(--section);
+  text-align: center;
+}
+
+.hilo-card-caption {
+  color: var(--hint);
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.hilo-card-number {
+  margin-top: 6px;
+  font-size: 64px;
+  line-height: 1.1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}

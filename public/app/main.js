@@ -2,11 +2,11 @@
 /** @typedef {import("../../src/web/protocol").WebView} WebView */
 /** @typedef {import("../../src/web/protocol").ClientMessage} ClientMessage */
 /** @typedef {import("../../src/web/protocol").ServerMessage} ServerMessage */
-/** @typedef {import("../../src/games/guess/view-types").GuessView} GuessView */
 /** @typedef {import("./screens.js").Composer} Composer */
 /** @typedef {import("./screens.js").Screen} Screen */
 /** @typedef {import("./screens.js").Action} Action */
-/** @typedef {import("./screens.js").Fx} Fx */
+/** @typedef {import("./screens.js").Haptics} Haptics */
+/** @typedef {import("./screens.js").GamePage<unknown>} GamePage */
 
 import { stringsFor } from "./i18n.js";
 import { messageScreen, screenFor } from "./screens.js";
@@ -37,7 +37,7 @@ import { clock, h, RING_LENGTH } from "./ui.js";
  * @property {(event: string, handler: () => void) => void} onEvent
  * @property {BottomButton} MainButton
  * @property {BottomButton} [SecondaryButton]
- * @property {{ impactOccurred(style: "light" | "medium" | "heavy"): void, notificationOccurred(type: "success" | "error" | "warning"): void }} HapticFeedback
+ * @property {Haptics} HapticFeedback
  */
 
 /** Must match CLOSE_SESSION_EXPIRED in src/web/protocol.ts. */
@@ -60,14 +60,9 @@ const state = {
   connected: false,
   /** Has the page ever been connected (decides "connecting" vs "reconnecting"). */
   wasConnected: false,
-  /** The turn whose card should flip over on the next draw. */
-  revealTurn: -1,
-  /** @type {Fx} what just changed, animated on the next draw only */
-  fx: { fresh: 0, flash: null },
+  /** @type {unknown} what the game page's `react` wants the next draw to animate; that draw only */
+  fx: null,
 };
-
-/** @type {Fx} */
-const NO_FX = { fresh: 0, flash: null };
 
 /** @type {WebSocket | null} */
 let socket = null;
@@ -100,23 +95,21 @@ const serverNow = () => Date.now() + state.clockOffset;
 
 function draw() {
   const t = strings();
+  const view = state.view;
   document.documentElement.lang = t.lang === "en" ? "en" : "zh-CN";
   /** @type {Screen} */
   let screen;
   if (state.error) screen = messageScreen(t.appTitle, t.errors[state.error]);
-  else if (!state.view) screen = messageScreen(t.appTitle, state.wasConnected ? t.reconnecting : t.connecting);
+  else if (!view) screen = messageScreen(t.appTitle, state.wasConnected ? t.reconnecting : t.connecting);
   else {
-    screen = screenFor({
-      view: state.view,
-      t,
-      send,
-      joinNextRoom,
-      revealTurn: state.revealTurn,
-      fx: state.fx,
-    });
+    const page = gamePage(view.room.game);
+    if (page === "loading") screen = messageScreen(view.room.title, t.connecting);
+    else if (page === "failed") screen = messageScreen(view.room.title, t.errors.page);
+    else screen = screenFor({ view, page, t, send, joinNextRoom, fx: state.fx });
   }
 
   document.title = screen.title;
+  document.documentElement.dataset.game = view?.room.game ?? "";
   document.documentElement.dataset.mode = screen.mode ?? "";
   const body = screen.body.filter(/** @returns {node is Node} */ (node) => node !== null);
   const inPage = applyActions(screen.main, screen.secondary);
@@ -242,37 +235,85 @@ function toast(/** @type {string} */ text) {
   els.toast.dataset.timer = String(setTimeout(() => els.toast.classList.remove("show"), TOAST_MS));
 }
 
-// ------------------------------------------------------------- feedback
+// ----------------------------------------------------------- game pages
+
+/** Game ids are lowercase letters, digits and `_` (GameModule.id); nothing else goes into a module path. */
+const GAME_ID = /^[a-z0-9_]{1,32}$/;
+const PAGE_RETRY_MS = 3000;
+
+/** Each game's page module once asked for: loaded, on its way, or failed (tried again shortly). */
+/** @type {Map<string, GamePage | "loading" | "failed">} */
+const pages = new Map();
+/** Failed loads per game, so a retry asks for a fresh copy rather than the remembered failure. */
+/** @type {Map<string, number>} */
+const pageFailures = new Map();
 
 /**
- * A buzz in the hand when something happens to you or your guess.
+ * The page module that draws a game, loading it (games/<id>.js) the first time it's asked for.
+ * @param {string} id
+ * @returns {GamePage | "loading" | "failed"}
+ */
+function gamePage(id) {
+  const known = pages.get(id);
+  if (known) return known;
+  if (!GAME_ID.test(id)) return "failed";
+  pages.set(id, "loading");
+  void loadPage(id).then((page) => {
+    if (!page) {
+      pages.set(id, "failed");
+      pageFailures.set(id, (pageFailures.get(id) ?? 0) + 1);
+      setTimeout(() => {
+        pages.delete(id);
+        draw();
+      }, PAGE_RETRY_MS);
+      draw();
+      return;
+    }
+    pages.set(id, page);
+    // The views that came in while it loaded weren't reacted to; this one is the first the game sees.
+    if (state.view?.room.game === id) state.fx = react(page, null, state.view);
+    draw();
+    state.fx = null;
+  });
+  return "loading";
+}
+
+/**
+ * @param {string} id
+ * @returns {Promise<GamePage | null>}
+ */
+async function loadPage(id) {
+  const retry = pageFailures.get(id);
+  try {
+    const module = /** @type {{ default: GamePage }} */ (await import(`./games/${id}.js${retry ? `?retry=${retry}` : ""}`));
+    if (module.default.styles) await loadStyles(`/app/games/${id}.css`);
+    return module.default;
+  } catch (error) {
+    console.error("loading the game's page failed", id, error);
+    return null;
+  }
+}
+
+/** Adds a stylesheet and waits for it, so the game's first screen doesn't flash unstyled. @param {string} href */
+function loadStyles(href) {
+  return new Promise((resolve) => {
+    const link = h("link", { rel: "stylesheet", href });
+    link.addEventListener("load", resolve);
+    link.addEventListener("error", resolve);
+    document.head.append(link);
+  });
+}
+
+/**
+ * Lets the game's page react to a new view (haptics) and say what the next draw should animate.
+ * @param {GamePage} page
  * @param {WebView | null} before
  * @param {WebView} after
  */
-function react(before, after) {
-  const haptics = tg?.HapticFeedback;
-  const previous = /** @type {GuessView | null} */ (before?.game ?? null)?.turn ?? null;
-  const turn = /** @type {GuessView | null} */ (after.game)?.turn ?? null;
-  if (!turn) return;
-  const newTurn = !previous || previous.no !== turn.no;
-
-  if (newTurn && turn.lead.id === after.me.id) haptics?.impactOccurred("heavy");
-  if (turn.mode === "taboo" && previous?.mode === "taboo" && !newTurn) {
-    const fresh = turn.feed.slice(previous.feed.length);
-    /** @type {Fx["flash"]} */
-    let flash = null;
-    if (fresh.some((item) => item.kind === "correct")) flash = "hit";
-    else if (fresh.some((item) => item.kind === "buzz" || item.kind === "slip")) flash = "foul";
-    if (flash) haptics?.notificationOccurred(flash === "hit" ? "success" : "error");
-    state.fx = { fresh: fresh.length, flash };
-  }
-  if (turn.mode === "unique" && turn.phase === "done" && (newTurn || previous?.phase !== "done")) {
-    state.revealTurn = turn.no; // flip the card over once
-    if (turn.outcome === "correct") haptics?.notificationOccurred("success");
-    else if (turn.outcome === "wrong") haptics?.notificationOccurred("error");
-  } else if (turn.phase !== "done") {
-    state.revealTurn = -1;
-  }
+function react(page, before, after) {
+  if (!page.react) return null;
+  const sameRoom = before?.room.id === after.room.id && before.room.game === after.room.game;
+  return page.react(sameRoom ? (before.game ?? null) : null, after.game ?? null, { me: after.me, haptics: tg?.HapticFeedback ?? null }) ?? null;
 }
 
 // ----------------------------------------------------------- connection
@@ -369,9 +410,10 @@ function onMessage(/** @type {string} */ raw) {
     state.clockOffset = message.now - Date.now();
     const before = state.view;
     state.view = message.view;
-    react(before, message.view);
+    const page = pages.get(message.view.room.game);
+    state.fx = typeof page === "object" ? react(page, before, message.view) : null;
     draw();
-    state.fx = NO_FX;
+    state.fx = null;
   } else if (message.t === "toast") {
     toast(message.text);
   } else if (message.t === "gone") {

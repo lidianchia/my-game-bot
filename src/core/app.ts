@@ -2,13 +2,14 @@ import type { Update } from "grammy/types";
 import type { Llm } from "../ai/llm";
 import type { Sql } from "../platform/sql";
 import { groupScopedCallback, stripGroupScope } from "../routing";
-import { parseRoomCallback, roomCallback } from "../telegram/callback";
+import { parseRoomCallback, roomCallback, settingCallback } from "../telegram/callback";
 import { esc, mentionHtml, splitForTelegram } from "../telegram/html";
 import { parseUpdate, usersSeenIn, type Intent, type TgUser } from "../telegram/intents";
 import { button, urlButton, type Keyboard, type SendOptions, type TelegramPort } from "../telegram/port";
 import { G } from "../ui/glyphs";
+import { blurbOf, gameCommand } from "./commands";
 import { cancelDeadlines, nextDeadlineAt, scheduleDeadline, takeDueDeadlines } from "./deadlines";
-import type { ClientMessage, WebView } from "../web/protocol";
+import type { ClientMessage, WebSetting, WebView } from "../web/protocol";
 import { webStartParam } from "../web/start-param";
 import type { CallbackReply, GameContext, GameModule, WebAction } from "./game";
 import { coreMessages, parseLang, type CoreMessages, type Lang } from "./i18n";
@@ -248,8 +249,17 @@ export class ChatApp {
   }
 
   private helpText(): string {
+    const m = this.m();
     const lang = this.lang();
-    return [...this.deps.games.map((game) => game.helpText(lang)), this.m().helpCommands].join("\n\n");
+    const games = this.gameEntries(m.helpGame).join(m.helpSep);
+    return [...this.deps.games.map((game) => game.helpText(lang)), m.helpCommands(games)].join("\n\n");
+  }
+
+  /** One "/guess Unsaid (a word game)"-style entry per game, for the welcome and /help. */
+  private gameEntries(format: (command: string, blurb: string) => string): string[] {
+    const lang = this.lang();
+    const games = this.deps.games;
+    return games.map((game) => format(`/${gameCommand(games, game)}`, blurbOf(game, lang)));
   }
 
   private callbackReply(callbackId: string): CallbackReply {
@@ -271,9 +281,11 @@ export class ChatApp {
         return this.onCommand(intent);
       case "callback":
         return this.onCallback(intent);
-      case "bot-added":
-        await this.send(this.m().groupWelcome);
+      case "bot-added": {
+        const m = this.m();
+        await this.send(m.groupWelcome(this.gameEntries(m.welcomeGame).join(m.welcomeSep)));
         return;
+      }
       case "migrated":
         return this.onMigrated(intent.toChatId);
       default:
@@ -411,12 +423,18 @@ export class ChatApp {
           const reason: EndReason = room.status === "lobby" ? "disbanded" : from.id === room.hostId ? "host" : "admin";
           await this.endRoom(room, reason);
         });
-      case "g":
+      case "g": {
         if (room.status !== "playing") {
           await reply.answer(m.gameNotStarted);
           return;
         }
-        return this.game(room.game).onAction(this.gameContext(room), args, from, reply);
+        const game = this.game(room.game);
+        if (!game.onAction) {
+          await reply.answer(game.web ? m.playInApp : m.staleButton);
+          return;
+        }
+        return game.onAction(this.gameContext(room), args, from, reply);
+      }
       default:
         await reply.answer(m.staleButton);
     }
@@ -1058,10 +1076,13 @@ export class ChatApp {
     const joinRow = [button(m.btnRequestJoin, cb("j"), "primary"), button(m.btnLeave, cb("lv"))];
     if (room.view === "settings") {
       const lang = this.lang();
+      const game = this.game(room.game);
       const langOption = (label: string, value: Lang) =>
         button(lang === value ? `${G.check} ${label}` : label, cb("lang", value), lang === value ? "primary" : undefined);
       return [
-        ...this.game(room.game).settingsKeyboard(room, lang, this.deps.llm !== null),
+        ...(game.settingsKeyboard
+          ? game.settingsKeyboard(room, lang, this.deps.llm !== null)
+          : settingButtons(room.id, game.settingRows?.(room.settings, lang) ?? [])),
         [langOption("中文", "zh"), langOption("English", "en")],
         // Others can still get in while the host fiddles with settings (or forgets to close them).
         joinRow,
@@ -1187,12 +1208,13 @@ export class ChatApp {
       },
       room: {
         id: room.id,
+        game: game.id,
         title: game.title(lang),
         status: room.status,
         host: person(room.hostId),
         players: players.map(person),
         settings: game.describeSettings(room.settings, lang).map(htmlToText),
-        options: room.status === "lobby" ? (game.web.settings?.(room.settings, lang) ?? []) : [],
+        options: room.status === "lobby" ? (game.settingRows?.(room.settings, lang) ?? []) : [],
         minPlayers: game.minPlayers,
         maxPlayers: game.maxPlayers,
         endReason: room.endReason ? m.endReason[room.endReason] : null,
@@ -1258,6 +1280,15 @@ export class ChatApp {
     }
     return notices[0] ?? null;
   }
+}
+
+/** The room message's settings panel built from a game's setting rows: one row of buttons each, the current choice ticked in blue. */
+function settingButtons(roomId: number, rows: WebSetting[]): Keyboard {
+  return rows.map((row) =>
+    row.options.map((option) =>
+      button(option.on ? `${G.check} ${option.label}` : option.label, settingCallback(roomId, row.key, option.value), option.on ? "primary" : undefined),
+    ),
+  );
 }
 
 /** Settings lines are Telegram HTML; the game page shows them as plain text. */

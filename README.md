@@ -146,38 +146,48 @@ Telegram ──webhook──▶ Worker (src/index.ts) ◀──── 游戏页�
                         ▼
                 GameModule (src/games/*)
           真心话大冒险：src/games/tod（聊天按钮）
-          心照不宣：src/games/guess（Mini App，GameModule.web）
+          心照不宣：src/games/guess（Mini App：GameModule.web + 页面 public/app/games/guess.js）
+          猜大小：src/games/_template（新游戏的模板，没注册，只在测试里跑）
 ```
 
 | 位置 | 内容 |
 | --- | --- |
-| `src/core/` | 与具体游戏无关的部分：房间生命周期、成员、turn-log、定时器（DO 只有一个 alarm，所有计时器存在 `deadlines` 表里，alarm 总是指向最早到期的那个）、双语文案 |
+| `src/core/` | 与具体游戏无关的部分：房间生命周期、成员、turn-log、定时器（DO 只有一个 alarm，所有计时器存在 `deadlines` 表里，alarm 总是指向最早到期的那个）、双语文案；命令菜单和 `/help`、欢迎语里的游戏列表从 `GAMES` 生成（`commands.ts`） |
 | `src/games/tod/` | 真心话大冒险：状态机（`index.ts`）、渲染（`render.ts`）、抽题（`deck.ts`）、题库（`content/`）、AI 出题（`ai.ts`） |
 | `src/ai/anthropic.ts` | Claude 出题：官方 `@anthropic-ai/sdk`，`output_config.effort` + JSON schema 结构化输出，`fallbacks: "default"` 服务端拒答兜底，拒答时抛错交给下一个来源 |
 | `src/ai/llm.ts` | 按 `AI_PROVIDERS` 的顺序依次尝试；DeepSeek / Gemini 走 OpenAI 兼容接口（DeepSeek 关闭 thinking、用 JSON 模式；Gemini 用 `reasoning_effort: minimal` 和 JSON schema） |
 | `src/telegram/` | Bot API 封装、更新解析、按钮数据编码 |
 | `src/web/` | Mini App 的服务端：校验 initData（`init-data.ts`）、会话令牌（`session.ts`）、链接参数（`start-param.ts`）、页面和服务器之间的消息格式（`protocol.ts`） |
-| `public/` | 游戏页面本身：`app.html` + `app/*.js`（原生 JS，用 JSDoc 写类型，`npm run typecheck` 会检查，不需要打包）+ `app/app.css`（颜色跟着 Telegram 的主题走） |
+| `public/` | 游戏页面：`app.html` 加一层外壳和每个游戏一个页面模块。外壳是 `app/main.js`（登录、连接、底部按钮）、`app/screens.js`（大厅、结束页）、`app/ui.js`（各游戏共用的组件）、`app/i18n.js`、`app/app.css`（颜色跟着 Telegram 的主题走）；游戏进行中的画面来自 `app/games/<游戏 id>.js`（和 `<游戏 id>.css`），打开哪个游戏的房间就加载哪个。原生 JS，用 JSDoc 写类型，`npm run typecheck` 会检查，不需要打包 |
 | `src/games/guess/` | 心照不宣：流程（`index.ts`）、每个人能看到什么（`view.ts`）、对词和查禁用词（`normalize.ts`）、群里的战报和统计（`render.ts`）、词库（`content/cards.ts`） |
+| `src/games/_template/` | 新游戏的模板「猜大小」，见下一节 |
 | `turn_log` 表 | 每一轮一行 JSON，记录谁、选了什么、题目、换过的题、投票明细、惩罚题、得分和起止时间。实时战报、总结、`/log`、`/stats` 都从这里算出来 |
 
 ## 加一个新游戏
 
-1. 在 `src/games/<id>/` 里实现 `GameModule`（接口见 `src/core/game.ts`），可以参照 `src/games/tod/index.ts`。
-2. 把它加进 `src/games/index.ts` 的 `GAMES` 数组。之后用 `/play <id>` 开这个游戏。
-3. 房间、邀请、申请、踢人、设置面板、实时战报的位置、结束总结、定时器、turn-log 都由框架提供。游戏本身只需要管自己的 `room.state` 和自己发的消息。
+从模板开始。`src/games/_template/` 是一个能玩的小游戏「猜大小」，在 Mini App 里玩：主角秘密选一个 1–6 的数字，其他人猜大还是小。设置、轮流当主角、只有一个人看得到的信息、计时、计分、turn-log、总结和统计它都有，接口里每个方法都注明了什么时候要写、什么时候可以不写。它没加进 `GAMES`，群里玩不到，只在测试里跑。
+
+1. 复制三处，把 `_template` 换成新游戏的 id（小写字母、数字、下划线，比如 `ludo`）：
+   - `src/games/_template/` → `src/games/<id>/`，改 `types.ts` 里的 `GAME_ID`，再改规则和文案；
+   - `public/app/games/_template.js` 和 `_template.css` → `public/app/games/<id>.js` 和 `<id>.css`，页面按游戏 id 自动加载；
+   - `test/unit/_template.test.ts` → `test/unit/<id>.test.ts`，去掉里面传给 `createHarness` 的 `games`。
+2. 把它加进 `src/games/index.ts` 的 `GAMES`。命令菜单、`/help` 和 bot 进群时的欢迎语会自动带上它（命令菜单要重新调一次 `/setup` 才更新）。之后发 `/<id>` 或 `/play <id>` 开房。
+
+框架负责：房间、邀请、申请、踢人、设置面板、实时战报的位置、结束总结、定时器、turn-log；Mini App 的登录、成员校验、断线重连、大厅（申请加入、房主同意、改设置、开始）和结束页。游戏只管自己的 `room.state`、自己发的消息，和游戏进行中的那一屏。
+
+几个约定：
+
+- **设置只写一遍**：`settingRows` 返回几行选项，游戏页面的大厅和群里房间消息的设置面板都从它生成，选了以后调 `applySetting`。群里的按钮不带行标题，所以选项要能单独看懂（「每人 2 次」，不是「2」）。实在需要不同的措辞，再自己写 `settingsKeyboard`，真心话大冒险和心照不宣就是这样做的。
+- **谁能看到什么只在服务端决定**：`web.view(game, userId)` 返回这个人页面上的游戏部分。每次状态变化都会重算，推给每个连着的人，所以**只放他该看到的**。
+- **页面上的点击**：页面发 `{ a: "g", op, ... }`，到服务端的 `web.onAction(game, userId, action)`，返回的提示只给点的人看。点击里带上轮次号，晚到的点击就不会落到下一轮上。
+- **页面模块** `public/app/games/<id>.js` 默认导出 `{ strings, play, lobby, ended, react, styles }`（类型见 `public/app/screens.js` 的 `GamePage`）：`play` 画游戏中的一屏；`lobby`、`ended` 往大厅和结束页里加内容；`react` 在新画面到来时决定震不震动、播不播动画。用 `public/app/ui.js` 里的组件拼；游戏自己的样式放 `<id>.css`，class 名加上游戏自己的前缀，免得和别的游戏冲突。
+- 只在聊天里用按钮玩的游戏（比如真心话大冒险）不写 `web`，在 `onAction` 里处理 `game.callback(...)` 生成的按钮。
 
 谁是卧底、狼人杀、Avalon 这类需要**私聊发身份**的游戏，框架已经准备好了：
 
 - `game.dm(userId, html, keyboard)` 用来私聊玩家。如果对方从来没私聊过 bot，Telegram 不允许 bot 先发消息，这时会返回 `false`。
 - `game.startLink()` 生成深链接按钮。玩家点一下就会打开和 bot 的私聊，并把「能私聊」这个状态记到本群名下。
 - `game.dmCallback(...)` 生成私聊里用的按钮数据，玩家在私聊里点的按钮会路由回群里对应的房间（比如 Avalon 里秘密投成功/失败）。
-
-Mini App 类的游戏（比如心照不宣）再加一个 `web` 字段：
-
-- `web.view(game, userId)` 返回这个人在页面上能看到的东西。每次状态变化都会重算并推给每个连着的人，所以**只放他该看到的**。
-- `web.onAction(game, userId, action)` 处理页面上的操作，返回给这个人的提示。
-- 房间消息会自动多一个「打开游戏」按钮；登录、成员校验、断线重连、大厅（申请加入、房主同意、开始）都由框架和 `public/app/main.js` 处理。
 
 ## 可以调的地方
 
