@@ -1,0 +1,11 @@
+{
+  // Type-checks the game page (plain JS with JSDoc types, served as-is from public/, no build step)
+  // against the protocol and view types the server uses.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": ["public/app/**/*.js"]
+}

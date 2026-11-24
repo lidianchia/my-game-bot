@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2024", "dom"],
+    "types": ["node"],
+    "allowJs": true
+  },
+  "include": ["unit/**/*.ts", "helpers/**/*.ts"]
+}

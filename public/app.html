@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>心照不宣</title>
+    <!-- Telegram's Mini App SDK: login data, theme colours, bottom buttons, haptics. -->
+    <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
+    <link rel="stylesheet" href="/app/app.css" />
+    <script type="module" src="/app/main.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <p id="status" class="status" role="status" hidden></p>
+      <main id="body" class="body"></main>
+      <form id="composer" class="composer" hidden autocomplete="off">
+        <input id="composer-input" class="composer-input" type="text" enterkeyhint="send" autocapitalize="off" spellcheck="false" />
+        <button id="composer-send" class="composer-send" type="submit" aria-label="发送">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </button>
+      </form>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,34 @@
+{
+  "name": "my-game-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Telegram group party-game bot (truth or dare first) on Cloudflare Workers + Durable Objects",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:poll": "tsx scripts/dev-poll.ts",
+    "deploy": "wrangler deploy",
+    "build:check": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "types": "wrangler types --include-env=false src/worker-runtime.d.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json && tsc -p test/worker/tsconfig.json && tsc -p scripts/tsconfig.json && tsc -p tsconfig.webapp.json",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:worker": "vitest run --project worker",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "grammy": "^1.46.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.8.2",
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.162.0"
+  }
+}

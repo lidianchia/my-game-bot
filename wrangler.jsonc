@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "my-game-bot",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+
+  // One Durable Object per Telegram chat. It owns that chat's rooms,
+  // turn log, stats and timers, so concurrent button presses in one group
+  // are processed strictly one after another.
+  "durable_objects": {
+    "bindings": [{ "name": "CHAT", "class_name": "ChatDurableObject" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatDurableObject"] }],
+
+  // The Mini App game page: public/app.html is served at /app. Requests that
+  // match no file (the webhook, /app/api/session, /app/ws) fall through to the Worker.
+  "assets": { "directory": "./public", "html_handling": "auto-trailing-slash", "not_found_handling": "none" },
+
+  // Non-secret settings. Secrets (BOT_TOKEN, WEBHOOK_SECRET, ANTHROPIC_API_KEY,
+  // and optionally DEEPSEEK_API_KEY / GEMINI_API_KEY) are set with
+  // `npx wrangler secret put <NAME>`.
+  "vars": {
+    "DEFAULT_LANG": "zh",
+    // Tried in order; a provider without an API key is skipped.
+    "AI_PROVIDERS": "anthropic,deepseek,gemini",
+    // claude-opus-5-5 is Anthropic's recommended starting point; claude-fable-5-2 is
+    // its most capable (and twice the price); claude-haiku-5-5 is the cheapest.
+    "ANTHROPIC_MODEL": "claude-opus-5-5",
+    // low | medium | high | xhigh | max. Low keeps question writing to a few seconds.
+    "ANTHROPIC_EFFORT": "low",
+    "DEEPSEEK_MODEL": "deepseek-flash",
+    "GEMINI_MODEL": "gemini-3.8-flash",
+    // Comma-separated chat ids allowed to use the bot. Empty = any group.
+    "ALLOWED_CHAT_IDS": "",
+    // Short name of the Mini App made with /newapp in BotFather (links look like
+    // t.me/<bot>/<short name>). Empty = games played in the Mini App (/guess) are off.
+    "MINIAPP_SHORT_NAME": "play"
+  }
+}
